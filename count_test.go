@@ -31,7 +31,7 @@ func TestAlive(t *testing.T) {
 		timer := time.After(5 * time.Second)
 		select {
 		case <-timer:
-			t.Fatal("no AliveCellsCount events received in 5 seconds")
+			panic("No AliveCellsCount events received in 5 seconds")
 		case <-implemented:
 			return
 		}
@@ -65,7 +65,7 @@ func TestAlive(t *testing.T) {
 			return
 		}
 	}
-	t.Fatal("not enough AliveCellsCount events received")
+	t.Fatal("Not enough AliveCellsCount events received")
 }
 
 func readAliveCounts(width, height int) map[int]int {

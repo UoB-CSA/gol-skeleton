@@ -2,7 +2,6 @@ package gol
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -92,7 +91,7 @@ func (io *ioState) readPgmImage() {
 	// Request a filename from the distributor.
 	filename := <-io.channels.filename
 
-	data, ioError := ioutil.ReadFile("images/" + filename + ".pgm")
+	data, ioError := os.ReadFile("images/" + filename + ".pgm")
 	util.Check(ioError)
 
 	fields := strings.Fields(string(data))
@@ -132,18 +131,15 @@ func startIo(p Params, c ioChannels) {
 		channels: c,
 	}
 
-	for {
-		select {
+	for command := range io.channels.command {
 		// Block and wait for requests from the distributor
-		case command := <-io.channels.command:
-			switch command {
-			case ioInput:
-				io.readPgmImage()
-			case ioOutput:
-				io.writePgmImage()
-			case ioCheckIdle:
-				io.channels.idle <- true
-			}
+		switch command {
+		case ioInput:
+			io.readPgmImage()
+		case ioOutput:
+			io.writePgmImage()
+		case ioCheckIdle:
+			io.channels.idle <- true
 		}
 	}
 }

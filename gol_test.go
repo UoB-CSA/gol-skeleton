@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -86,7 +86,7 @@ func assertEqualBoard(t *testing.T, given, expected []util.Cell, p gol.Params) b
 }
 
 func readAliveCells(path string, width, height int) []util.Cell {
-	data, ioError := ioutil.ReadFile(path)
+	data, ioError := os.ReadFile(path)
 	util.Check(ioError)
 
 	fields := strings.Fields(string(data))

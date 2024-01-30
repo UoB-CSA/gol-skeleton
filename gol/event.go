@@ -14,14 +14,14 @@ type Event interface {
 	GetCompletedTurns() int
 }
 
-// AliveCellsCount is an Event notifying the user about the number of currently alive cells.
+// `AliveCellsCount` is an Event notifying the user about the number of currently alive cells.
 // This Event should be sent every 2s.
 type AliveCellsCount struct { // implements Event
 	CompletedTurns int
 	CellsCount     int
 }
 
-// ImageOutputComplete is an Event notifying the user about the completion of output.
+// `ImageOutputComplete` is an Event notifying the user about the completion of output.
 // This Event should be sent every time an image has been saved.
 type ImageOutputComplete struct { // implements Event
 	CompletedTurns int
@@ -37,29 +37,39 @@ const (
 	Quitting
 )
 
-// StateChange is an Event notifying the user about the change of state of execution.
+// `StateChange` is an Event notifying the user about the change of state of execution.
 // This Event should be sent every time the execution is paused, resumed or quit.
 type StateChange struct { // implements Event
 	CompletedTurns int
 	NewState       State
 }
 
-// CellFlipped is an Event notifying the GUI about a change of state of a single cell.
-// This even should be sent every time a cell changes state.
+// `CellFlipped` is an Event notifying the GUI about a change of state of a single cell.
+// This event should be sent every time a cell changes state.
 // Make sure to send this event for all cells that are alive when the image is loaded in.
 type CellFlipped struct { // implements Event
 	CompletedTurns int
 	Cell           util.Cell
 }
 
-// TurnComplete is an Event notifying the GUI about turn completion.
+// `CellsFlipped` is an Event notifying the GUI about a change of state of many cells.
+// You can collect many flipped cells and send `CellsFlipped` at a time instead of sending `CellFlipped` for every flipped cell.
+// You can send many times of `CellsFlipped` event in a turn, i.e., each worker could send `CellsFlipped`.
+// **Please be careful not to send `CellFlipped` and `CellsFlipped` at the same time, as they may conflict.**
+// Choose one of them.
+type CellsFlipped struct { // implements Event
+	CompletedTurns int
+	Cells   []util.Cell
+}
+
+// `TurnComplete` is an Event notifying the GUI about turn completion.
 // SDL will render a frame when this event is sent.
-// All CellFlipped events must be sent *before* TurnComplete.
+// All `CellFlipped` or `CellsFlipped` events must be sent *before* `TurnComplete`.
 type TurnComplete struct { // implements Event
 	CompletedTurns int
 }
 
-// FinalTurnComplete is an Event notifying the testing framework about the new world state after execution finished.
+// `FinalTurnComplete` is an Event notifying the testing framework about the new world state after execution finished.
 // The data included with this Event is used directly by the tests.
 // SDL closes the window when this Event is sent.
 type FinalTurnComplete struct {
@@ -99,7 +109,7 @@ func (event AliveCellsCount) GetCompletedTurns() int {
 }
 
 func (event ImageOutputComplete) String() string {
-	return fmt.Sprintf("File %v output complete", event.Filename)
+	return fmt.Sprintf("File %v Output Done", event.Filename)
 }
 
 func (event ImageOutputComplete) GetCompletedTurns() int {
@@ -107,15 +117,23 @@ func (event ImageOutputComplete) GetCompletedTurns() int {
 }
 
 func (event CellFlipped) String() string {
-	return fmt.Sprintf("")
+	return ""
 }
 
 func (event CellFlipped) GetCompletedTurns() int {
 	return event.CompletedTurns
 }
 
+func (event CellsFlipped) String() string {
+	return ""
+}
+
+func (event CellsFlipped) GetCompletedTurns() int {
+	return event.CompletedTurns
+}
+
 func (event TurnComplete) String() string {
-	return fmt.Sprintf("")
+	return ""
 }
 
 func (event TurnComplete) GetCompletedTurns() int {
@@ -123,7 +141,7 @@ func (event TurnComplete) GetCompletedTurns() int {
 }
 
 func (event FinalTurnComplete) String() string {
-	return fmt.Sprintf("")
+	return "Final Turn Complete"
 }
 
 func (event FinalTurnComplete) GetCompletedTurns() int {
