@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"runtime"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"uk.ac.bris.cs/gameoflife/gol"
@@ -56,7 +56,7 @@ func main() {
 	keyPresses := make(chan rune, 10)
 	events := make(chan gol.Event, 1000)
 
-	go sigterm(keyPresses)
+	go sigint(keyPresses)
 
 	go gol.Run(params, events, keyPresses)
 	if !(*headless) {
@@ -66,9 +66,12 @@ func main() {
 	}
 }
 
-func sigterm(keyPresses chan<- rune) {
-	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGTERM, syscall.SIGINT)
-	<-sigterm
+func sigint(keyPresses chan<- rune) {
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
+	<-sigint
 	keyPresses <- 'q'
+	<-sigint
+	fmt.Println("\033[33mWARN\033[0m Force exit by the user with CTRL+C")
+	os.Exit(0)
 }
