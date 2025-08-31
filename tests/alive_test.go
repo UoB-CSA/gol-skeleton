@@ -25,62 +25,80 @@ func TestAlive(t *testing.T) {
 	events := make(chan gol.Event)
 	keyPresses := make(chan rune, 2)
 	go gol.Run(p, events, keyPresses)
-
-	implemented := false
-	eventsClosed := make(chan bool)
-	aliveCellCounts := make(chan gol.AliveCellsCount)
+	aliveCountChan := make(chan gol.AliveCellsCount)
 
 	go func() {
+		// Forward AliveCellsCount events
 		for event := range events {
 			switch e := event.(type) {
 			case gol.AliveCellsCount:
-				aliveCellCounts <- e
+				aliveCountChan <- e
 			}
 		}
-		eventsClosed <- true
+		close(aliveCountChan)
 	}()
 
-	timer := time.After(5 * time.Second)
-
-	i := 0
+	// The first `AliveCellsCount` event must be sent within 4 seconds
+	initialTimer := time.After(4 * time.Second)
+	// All remaining `AliveCellsCount` events must be sent within 14 seconds
+	remainingTimer := time.After(14 * time.Second)
+	// Check if reported completed turns are incremental
+	const unassignedCompletedTurns int = -1
+	lastCompletedTurns := unassignedCompletedTurns
+	receivedCount := 0
 	for {
 		select {
-		case e := <-aliveCellCounts:
+		case <-initialTimer:
+			if lastCompletedTurns == unassignedCompletedTurns {
+				t.Fatalf("%v No AliveCellsCount events received in 4 seconds", util.Red("ERROR"))
+			}
+		case <-remainingTimer:
+			t.Fatalf(
+				`%v Not enough AliveCellsCount events received in 14 seconds
+					Make sure AliveCellsCount events are sent every 2 seconds`,
+				util.Red("ERROR"),
+			)
+		case event, ok := <-aliveCountChan:
 			var expected int
-			if e.CompletedTurns == 0 {
-				t.Fatalf("%v Count reported for turn 0, should have a delay", util.Red("ERROR"))
-			} else if e.CompletedTurns <= 10000 {
-				expected = alive[e.CompletedTurns]
-			} else if e.CompletedTurns%2 == 0 {
+			if !ok {
+				t.Fatalf(
+					"%v Not enough AliveCellsCount events received, as distributor exited too early",
+					util.Red("ERROR"),
+				)
+			} else if event.CompletedTurns <= lastCompletedTurns {
+				t.Fatalf(
+					`%v Reported completed turns should be incremental
+					Reported completed turn: %v
+					Last completed turn: %v`,
+					util.Red("ERROR"),
+					event.CompletedTurns,
+					lastCompletedTurns,
+				)
+			} else if event.CompletedTurns <= 10000 {
+				expected = alive[event.CompletedTurns]
+			} else if event.CompletedTurns%2 == 0 {
 				expected = 5565
 			} else {
 				expected = 5567
 			}
-			actual := e.CellsCount
+			actual := event.CellsCount
 			if expected != actual {
 				t.Fatalf(
 					"%v At turn %v expected %v alive cells, got %v instead",
 					util.Red("ERROR"),
-					e.CompletedTurns,
+					event.CompletedTurns,
 					expected,
 					actual,
 				)
 			} else {
-				t.Log(e)
-				implemented = true
-				i++
-
-				if i >= 5 {
+				t.Log(event)
+				lastCompletedTurns = event.CompletedTurns
+				receivedCount++
+				if receivedCount >= 5 {
 					keyPresses <- 'q'
 					return
 				}
 			}
-		case <-timer:
-			if !implemented {
-				t.Fatalf("%v No AliveCellsCount events received in 5 seconds", util.Red("ERROR"))
-			}
-		case <-eventsClosed:
-			t.Fatalf("%v Not enough AliveCellsCount events received", util.Red("ERROR"))
 		}
 	}
 }
