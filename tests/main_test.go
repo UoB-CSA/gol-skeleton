@@ -1,8 +1,9 @@
-package main
+package tests
 
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -18,6 +19,11 @@ var clearPixelsChan chan struct{}
 
 func TestMain(m *testing.M) {
 	runtime.LockOSThread()
+	_, filename, _, _ := runtime.Caller(0)
+	rootDir := filepath.Dir(filepath.Dir(filename))
+	if err := os.Chdir(rootDir); err != nil {
+		panic(err)
+	}
 	var sdlFlag = flag.Bool(
 		"sdl",
 		false,

@@ -1,9 +1,10 @@
-package main
+package tests
 
 import (
 	"os"
 	"runtime/trace"
 	"testing"
+
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/util"
 )
