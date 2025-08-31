@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,6 +12,7 @@ import (
 
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 // main is the function called when starting Game of Life with 'go run .'
@@ -50,10 +51,10 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Printf("%-10v %v\n", "Threads", params.Threads)
-	fmt.Printf("%-10v %v\n", "Width", params.ImageWidth)
-	fmt.Printf("%-10v %v\n", "Height", params.ImageHeight)
-	fmt.Printf("%-10v %v\n", "Turns", params.Turns)
+	log.Printf("[Main] %-10v %v", "Threads", params.Threads)
+	log.Printf("[Main] %-10v %v", "Width", params.ImageWidth)
+	log.Printf("[Main] %-10v %v", "Height", params.ImageHeight)
+	log.Printf("[Main] %-10v %v", "Turns", params.Turns)
 
 	keyPresses := make(chan rune, 10)
 	events := make(chan gol.Event, 1000)
@@ -75,10 +76,10 @@ func sigint() {
 	for {
 		<-sigint
 		if exit.Load() {
-			fmt.Println("\033[33mWARN\033[0m Force quit by the user")
+			log.Printf("[Main] %v Force quit by the user", util.Yellow("WARN"))
 			os.Exit(0)
 		} else {
-			fmt.Println("\033[33mWARN\033[0m Press Ctrl+C again to force quit")
+			log.Printf("[Main] %v Press Ctrl+C again to force quit", util.Yellow("WARN"))
 			exit.Store(true)
 			go func() {
 				time.Sleep(4 * time.Second)

@@ -43,7 +43,13 @@ func checkEqualBoard(given, expected []util.Cell) bool {
 }
 
 func boardFail(t *testing.T, given, expected []util.Cell, p gol.Params) bool {
-	errorString := fmt.Sprintf("-----------------\n\n  FAILED TEST\n  %vx%v\n  %d Workers\n  %d Turns\n", p.ImageWidth, p.ImageHeight, p.Threads, p.Turns)
+	errorString := fmt.Sprintf(
+		"-----------------\n\n  FAILED TEST\n  %vx%v\n  %d Workers\n  %d Turns\n",
+		p.ImageWidth,
+		p.ImageHeight,
+		p.Threads,
+		p.Turns,
+	)
 	if p.ImageWidth == 16 && p.ImageHeight == 16 {
 		errorString = errorString + util.AliveCellsToString(given, expected, p.ImageWidth, p.ImageHeight)
 	}
@@ -66,29 +72,31 @@ func emptyOutFolder() {
 	_ = os.Mkdir("out", os.ModePerm)
 }
 
-func readAliveCells(path string, width, height int) []util.Cell {
+func readAliveCells(t *testing.T, path string, width, height int) []util.Cell {
 	data, ioError := os.ReadFile(path)
-	util.Check(ioError)
+	if ioError != nil {
+		t.Fatalf("%v %v", util.Red("ERROR"), ioError)
+	}
 
 	fields := strings.Fields(string(data))
 
 	if fields[0] != "P5" {
-		panic("Not a pgm file")
+		t.Fatalf("%v %v is not a pgm file", util.Red("ERROR"), path)
 	}
 
 	imageWidth, _ := strconv.Atoi(fields[1])
 	if imageWidth != width {
-		panic("Incorrect width")
+		t.Fatalf("%v Incorrect pgm width", util.Red("ERROR"))
 	}
 
 	imageHeight, _ := strconv.Atoi(fields[2])
 	if imageHeight != height {
-		panic("Incorrect height")
+		t.Fatalf("%v Incorrect pgm height", util.Red("ERROR"))
 	}
 
 	maxval, _ := strconv.Atoi(fields[3])
 	if maxval != 255 {
-		panic("Incorrect maxval/bit depth")
+		t.Fatalf("%v Incorrect pgm maxval/bit depth", util.Red("ERROR"))
 	}
 
 	image := []byte(fields[4])
@@ -150,7 +158,7 @@ func MakeTester(
 		golDone:      golDone,
 		turn:         0,
 		world:        world,
-		aliveMap:     readAliveCounts(params.ImageWidth, params.ImageHeight),
+		aliveMap:     readAliveCounts(t, params.ImageWidth, params.ImageHeight),
 		testTurn:     false,
 		sdlSync:      nil,
 	}
@@ -186,27 +194,50 @@ func (tester *Tester) Loop() {
 			}
 
 			if quitPanic {
-				timeout(tester.t, 2*time.Second, awaitDone, "Your program has not returned from the gol.Run function\n%v\n%v", "Continuing with other tests, leaving your program executing", "You may get unexpected behaviour")
+				timeout(
+					tester.t,
+					2*time.Second,
+					awaitDone,
+					`Your program has not returned from the gol.Run function
+					Continuing with other tests, leaving your program executing
+					You may get unexpected behaviour`,
+				)
 			} else {
-				timeoutWarn(2*time.Second, awaitDone, "Your program has not returned from the gol.Run function\n%v\n%v", "Continuing with other tests, leaving your program executing", "You may get unexpected behaviour")
+				timeoutWarn(
+					tester.t,
+					2*time.Second,
+					awaitDone,
+					`Your program has not returned from the gol.Run function
+					Continuing with other tests, leaving your program executing
+					You may get unexpected behaviour`,
+				)
 			}
-
 			limitedAssert.LimitHitMessage("Repeat CellFlipped errors have been hidden")
-
 			return
+
 		case event := <-tester.events:
 			switch e := event.(type) {
 			case gol.CellFlipped:
 				if tester.testTurn {
-					limitedAssert.Assert(e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
-						"Expected completed %v or %v turns for CellFlipped event, got %v instead", tester.turn, tester.turn+1, e.CompletedTurns)
+					limitedAssert.Assert(
+						e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
+						"Expected completed %v or %v turns for CellFlipped event, got %v instead",
+						tester.turn,
+						tester.turn+1,
+						e.CompletedTurns,
+					)
 				}
 				tester.world[e.Cell.Y][e.Cell.X] = ^tester.world[e.Cell.Y][e.Cell.X]
 				flipCell(e.Cell)
 			case gol.CellsFlipped:
 				if tester.testTurn {
-					limitedAssert.Assert(e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
-						"Expected completed %v or %v turns for CellsFlipped event, got %v instead", tester.turn, tester.turn+1, e.CompletedTurns)
+					limitedAssert.Assert(
+						e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
+						"Expected completed %v or %v turns for CellsFlipped event, got %v instead",
+						tester.turn,
+						tester.turn+1,
+						e.CompletedTurns,
+					)
 				}
 				for _, cell := range e.Cells {
 					tester.world[cell.Y][cell.X] = ^tester.world[cell.Y][cell.X]
@@ -215,8 +246,14 @@ func (tester *Tester) Loop() {
 			case gol.TurnComplete:
 				if tester.testTurn {
 					limitedAssert.Reset()
-					assert(tester.t, e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
-						"Expected completed %v or %v turns for TurnComplete event, got %v instead", tester.turn, tester.turn+1, e.CompletedTurns)
+					assert(
+						tester.t,
+						e.CompletedTurns == tester.turn || e.CompletedTurns == tester.turn+1,
+						"Expected completed %v or %v turns for TurnComplete event, got %v instead",
+						tester.turn,
+						tester.turn+1,
+						e.CompletedTurns,
+					)
 				}
 				tester.turn++
 				refresh()
@@ -225,15 +262,20 @@ func (tester *Tester) Loop() {
 					<-tester.sdlSync
 				}
 			case gol.AliveCellsCount:
-				fmt.Printf("Completed Turns %-8v %-20v Avg%+5v turns/sec\n", event.GetCompletedTurns(), event, avgTurns.Get(event.GetCompletedTurns()))
+				tester.t.Logf(
+					"[Event] Completed Turns %-8v %-20v Avg%+5v turns/sec\n",
+					event.GetCompletedTurns(),
+					event,
+					avgTurns.TurnsPerSec(event.GetCompletedTurns()),
+				)
 			case gol.ImageOutputComplete:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				tester.t.Logf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 				tester.HandleEvent(e)
 			case gol.FinalTurnComplete:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				tester.t.Logf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 				tester.HandleEvent(e)
 			case gol.StateChange:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				tester.t.Logf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 				tester.HandleEvent(e)
 
 				if tester.sdlSync != nil && tester.turn == 0 {
@@ -247,9 +289,12 @@ func (tester *Tester) Loop() {
 
 func (tester *Tester) HandleEvent(event gol.Event) {
 	if len(tester.eventWatcher) >= cap(tester.eventWatcher) {
-		fmt.Printf("WARNING: The tester's internal event buffer is full\n%v\n%v\n",
-			"Discarding earliest event",
-			"Are you sending too many ImageOutputComplete, FinalTurnComplete or StateChange events?")
+		tester.t.Logf(
+			`%v The tester's internal event buffer is full
+			Discarding earliest event
+			Are you sending too many ImageOutputComplete, FinalTurnComplete or StateChange events?`,
+			util.Yellow("WARN"),
+		)
 		<-tester.eventWatcher
 	}
 
@@ -277,7 +322,9 @@ func (tester *Tester) Stop(returnPanic bool) {
 func (tester *Tester) AwaitSync() (int, bool) {
 	success := timeout(tester.t, 2*time.Second, func() {
 		<-tester.sdlSync
-	}, "No turns completed in 2 seconds. Is your program deadlocked?")
+	},
+		"No turns completed in 2 seconds. Is your program deadlocked?",
+	)
 	return tester.turn, success
 }
 
@@ -305,8 +352,14 @@ func (tester *Tester) TestAlive() {
 	} else {
 		expected = 5567
 	}
-	assert(tester.t, aliveCount == expected,
-		"At turn %v expected %v alive cells in the SDL window, got %v instead", tester.turn, expected, aliveCount)
+	assert(
+		tester.t,
+		aliveCount == expected,
+		"At turn %v expected %v alive cells in the SDL window, got %v instead",
+		tester.turn,
+		expected,
+		aliveCount,
+	)
 }
 
 func (tester *Tester) TestImage() {
@@ -316,7 +369,7 @@ func (tester *Tester) TestImage() {
 		width, height := tester.params.ImageWidth, tester.params.ImageHeight
 
 		path := fmt.Sprintf("check/images/%vx%vx%v.pgm", width, height, tester.turn)
-		expectedAlive := readAliveCells(path, width, height)
+		expectedAlive := readAliveCells(tester.t, path, width, height)
 
 		aliveCells := make([]util.Cell, 0, width*height)
 		for y := range tester.world {
@@ -330,13 +383,25 @@ func (tester *Tester) TestImage() {
 		equal := checkEqualBoard(aliveCells, expectedAlive)
 		if !equal {
 			if tester.turn == 0 {
-				tester.t.Error("ERROR: The image displayed in the SDL window is incorrect for turn 0\nHave you sent the correct CellFlipped events before StateChange Executing?")
+				tester.t.Errorf(
+					`%v The image displayed in the SDL window is incorrect for turn 0
+					Have you sent the correct CellFlipped events before StateChange Executing?`,
+					util.Red("ERROR"),
+				)
 			} else {
-				tester.t.Errorf("ERROR: The image displayed in the SDL window is incorrect for turn %v", tester.turn)
+				tester.t.Errorf(
+					"%v The image displayed in the SDL window is incorrect for turn %v",
+					util.Red("ERROR"),
+					tester.turn,
+				)
 			}
 		}
 	} else {
-		fmt.Printf("WARNING: TestImage called on invalid turn: %v. This call will be ignored\n", tester.turn)
+		tester.t.Logf(
+			"%v TestImage called on invalid turn: %v, this call will be ignored",
+			util.Yellow("WARN"),
+			tester.turn,
+		)
 	}
 }
 
@@ -345,16 +410,28 @@ func (tester *Tester) TestStartsExecuting() {
 	timeout(tester.t, 2*time.Second, func() {
 		e := <-tester.eventWatcher
 		if e, ok := e.(gol.StateChange); ok {
-			assert(tester.t, e.NewState == gol.Executing,
-				"First StateChange event should have a NewState of Executing, not %v", e)
-			assert(tester.t, e.CompletedTurns == 0,
-				"First StateChange event should have a CompletedTurns of 0, not %v", e.CompletedTurns)
+			assert(
+				tester.t,
+				e.NewState == gol.Executing,
+				"First StateChange event should have a NewState of Executing, not %v",
+				e,
+			)
+			assert(
+				tester.t,
+				e.CompletedTurns == 0,
+				"First StateChange event should have a CompletedTurns of 0, not %v",
+				e.CompletedTurns,
+			)
 			return
 		}
-
-		tester.t.Errorf("ERROR: %v event should not be sent before StateChange Executing", e)
-
-	}, "No StateChange events received in 2 seconds")
+		tester.t.Errorf(
+			"%v %v event should not be sent before StateChange Executing",
+			util.Red("ERROR"),
+			e,
+		)
+	},
+		"No StateChange events received in 2 seconds",
+	)
 }
 
 func (tester *Tester) TestExecutes(turn int) {
@@ -363,13 +440,20 @@ func (tester *Tester) TestExecutes(turn int) {
 		for e := range tester.eventWatcher {
 			if e, ok := e.(gol.StateChange); ok && e.NewState == gol.Executing {
 				if e.CompletedTurns != turn && e.CompletedTurns != turn+1 {
-					tester.t.Errorf("ERROR: StateChange event should have a CompletedTurns of %v or %v, not %v", turn, turn+1, e.CompletedTurns)
+					tester.t.Errorf(
+						"%v StateChange event should have a CompletedTurns of %v or %v, not %v",
+						util.Red("ERROR"),
+						turn,
+						turn+1,
+						e.CompletedTurns,
+					)
 				}
-
 				return
 			}
 		}
-	}, "No StateChange Executing events received in 2 seconds")
+	},
+		"No StateChange Executing events received in 2 seconds",
+	)
 }
 
 func (tester *Tester) TestPauses() int {
@@ -384,7 +468,9 @@ func (tester *Tester) TestPauses() int {
 				return
 			}
 		}
-	}, "No StateChange Paused events received in 2 seconds")
+	},
+		"No StateChange Paused events received in 2 seconds",
+	)
 
 	if !completed {
 		return -1
@@ -398,21 +484,39 @@ func (tester *Tester) TestFinishes(allowedTime int) {
 	timeout(tester.t, time.Duration(allowedTime)*time.Second, func() {
 		for e := range tester.eventWatcher {
 			if e, ok := e.(gol.FinalTurnComplete); ok {
-				assert(tester.t, e.CompletedTurns == tester.params.Turns,
-					"FinalTurnComplete should have a CompletedTurns of %v, not %v", tester.params.Turns, e.CompletedTurns)
+				assert(
+					tester.t,
+					e.CompletedTurns == tester.params.Turns,
+					"FinalTurnComplete should have a CompletedTurns of %v, not %v",
+					tester.params.Turns,
+					e.CompletedTurns,
+				)
 				return
 			}
 		}
-	}, "No FinalTurnComplete events received in %v seconds", allowedTime)
+	},
+		"No FinalTurnComplete events received in %v seconds",
+		allowedTime,
+	)
 }
 
 func (tester *Tester) TestTurnCompleteCount() {
 	tester.t.Logf("Testing number of TurnComplete events sent")
 
 	if tester.turn > tester.params.Turns {
-		tester.t.Errorf("ERROR: Too many TurnComplete events sent. Should be %v, not %v", tester.params.Turns, tester.turn)
+		tester.t.Errorf(
+			"%v Too many TurnComplete events sent. Should be %v, not %v",
+			util.Red("ERROR"),
+			tester.params.Turns,
+			tester.turn,
+		)
 	} else if tester.turn < tester.params.Turns {
-		tester.t.Errorf("ERROR: Too few TurnComplete events sent. Should be %v, not %v", tester.params.Turns, tester.turn)
+		tester.t.Errorf(
+			"%v Too few TurnComplete events sent. Should be %v, not %v",
+			util.Red("ERROR"),
+			tester.params.Turns,
+			tester.turn,
+		)
 	}
 }
 
@@ -424,7 +528,9 @@ func (tester *Tester) TestQuits() {
 				return
 			}
 		}
-	}, "No StateChange Quitting events received in 2 seconds")
+	},
+		"No StateChange Quitting events received in 2 seconds",
+	)
 }
 
 func (tester *Tester) TestNoStateChange(ddl time.Duration) {
@@ -449,7 +555,11 @@ func (tester *Tester) TestNoStateChange(ddl time.Duration) {
 	case <-time.After(ddl):
 		stop <- true
 	case e := <-change:
-		tester.t.Errorf("ERROR: Recieved unexpected StateChange event %v", e)
+		tester.t.Errorf(
+			"%v Recieved unexpected StateChange event %v",
+			util.Red("ERROR"),
+			e,
+		)
 	}
 }
 
@@ -462,14 +572,20 @@ func (tester *Tester) TestOutput() {
 	completed := timeout(tester.t, 4*time.Second, func() {
 		for e := range tester.eventWatcher {
 			if e, ok := e.(gol.ImageOutputComplete); ok {
-				assert(tester.t, e.Filename == fmt.Sprintf("%vx%vx%v", width, height, e.CompletedTurns),
-					"Filename is not correct")
+				assert(
+					tester.t,
+					e.Filename == fmt.Sprintf("%vx%vx%v", width, height, e.CompletedTurns),
+					"Filename is not correct",
+				)
 				turn <- e.CompletedTurns
 				return
 			}
 		}
-	}, "No ImageOutput events received in 4 seconds\n%v",
-		"If this test is running in WSL2, please make sure the test is located within WSL2 file system rather than Windows! i.e. Your path must not start with /mnt/...")
+	},
+		`No ImageOutput events received in 4 seconds
+		If tests are running in WSL2, please make sure project is located within WSL2 file system rather than Windows!
+		i.e. Your path must not start with /mnt/...`,
+	)
 
 	if !completed {
 		return
@@ -490,12 +606,24 @@ func (tester *Tester) TestOutput() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			tester.t.Errorf("ERROR: Failed to read image file. Make sure you do ioCheckIdle before sending the ImageOutputComplete\n%v", r)
+			tester.t.Errorf(
+				`%v Failed to read image file, make sure you do ioCheckIdle before sending the ImageOutputComplete
+				%v`,
+				util.Red("ERROR"),
+				r,
+			)
 		}
 	}()
-	alive := readAliveCells(path, width, height)
+	alive := readAliveCells(tester.t, path, width, height)
 
-	assert(tester.t, len(alive) == expected, "At turn %v expected %v alive cells in output PGM image, got %v instead", eventTurn, expected, len(alive))
+	assert(
+		tester.t,
+		len(alive) == expected,
+		"At turn %v expected %v alive cells in output PGM image, got %v instead",
+		eventTurn,
+		expected,
+		len(alive),
+	)
 }
 
 func timeout(t *testing.T, ddl time.Duration, f func(), msg string, a ...interface{}) bool {
@@ -506,14 +634,14 @@ func timeout(t *testing.T, ddl time.Duration, f func(), msg string, a ...interfa
 	}()
 	select {
 	case <-time.After(ddl):
-		t.Errorf("ERROR: %v", fmt.Sprintf(msg, a...))
+		t.Errorf("%v %v", util.Red("ERROR"), fmt.Sprintf(msg, a...))
 		return false
 	case <-done:
 		return true
 	}
 }
 
-func timeoutWarn(ddl time.Duration, f func(), msg string, a ...interface{}) {
+func timeoutWarn(t *testing.T, ddl time.Duration, f func(), msg string, a ...interface{}) {
 	done := make(chan bool, 1)
 	go func() {
 		f()
@@ -521,7 +649,7 @@ func timeoutWarn(ddl time.Duration, f func(), msg string, a ...interface{}) {
 	}()
 	select {
 	case <-time.After(ddl):
-		fmt.Printf("WARNING: %v\n", fmt.Sprintf(msg, a...))
+		t.Logf("%v %v", util.Yellow("WARN"), fmt.Sprintf(msg, a...))
 	case <-done:
 		return
 	}
@@ -529,7 +657,7 @@ func timeoutWarn(ddl time.Duration, f func(), msg string, a ...interface{}) {
 
 func assert(t *testing.T, predicate bool, msg string, a ...interface{}) {
 	if !predicate {
-		t.Errorf("ERROR: %v", fmt.Sprintf(msg, a...))
+		t.Errorf("%v %v", util.Red("ERROR"), fmt.Sprintf(msg, a...))
 	}
 }
 
@@ -544,7 +672,7 @@ func (l *LimitedAssert) Assert(predicate bool, msg string, a ...interface{}) {
 		if l.failed {
 			l.limitHit = true
 		} else {
-			l.t.Errorf("ERROR: %v", fmt.Sprintf(msg, a...))
+			l.t.Errorf("%v %v", util.Red("ERROR"), fmt.Sprintf(msg, a...))
 			l.failed = true
 		}
 	}

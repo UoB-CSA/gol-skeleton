@@ -20,11 +20,15 @@ func TestTrace(t *testing.T) {
 	f, _ := os.Create("trace.out")
 	events := make(chan gol.Event)
 	err := trace.Start(f)
-	util.Check(err)
+	if err != nil {
+		t.Fatalf("%v %v", util.Red("ERROR"), err)
+	}
 	go gol.Run(traceParams, events, nil)
 	for range events {
 	}
 	trace.Stop()
 	err = f.Close()
-	util.Check(err)
+	if err != nil {
+		t.Fatalf("%v %v", util.Red("ERROR"), err)
+	}
 }

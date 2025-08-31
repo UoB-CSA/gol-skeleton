@@ -71,7 +71,7 @@ func testSdlImages(t *testing.T) {
 			return
 		}
 
-		assert(tester.t, turn == 0, "Turn number should be 0 after first sync, not %v\n", turn)
+		assert(tester.t, turn == 0, "Turn number should be 0 after first sync, not %v", turn)
 
 		tester.TestImage()
 		tester.Continue()
@@ -124,7 +124,7 @@ func testSdlAlive(t *testing.T) {
 			tester.Stop(false)
 			return
 		}
-		assert(tester.t, turn == 0, "Turn number should be 0 after first sync, not %v\n", turn)
+		assert(tester.t, turn == 0, "Turn number should be 0 after first sync, not %v", turn)
 		tester.Continue()
 
 		for turn < 100 {

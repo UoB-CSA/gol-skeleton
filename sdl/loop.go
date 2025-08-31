@@ -1,8 +1,9 @@
 package sdl
 
 import (
-	"fmt"
+	"log"
 	"time"
+
 	"github.com/veandco/go-sdl2/sdl"
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/util"
@@ -55,18 +56,23 @@ sdl:
 				w.FlipPixel(e.Cell.X, e.Cell.Y)
 			case gol.CellsFlipped:
 				for _, cell := range e.Cells {
-					w.FlipPixel(cell.X, cell.Y) 
+					w.FlipPixel(cell.X, cell.Y)
 				}
 			case gol.TurnComplete:
 				dirty = true
 			case gol.AliveCellsCount:
-				fmt.Printf("Completed Turns %-8v %-20v Avg%+5v turns/sec\n", event.GetCompletedTurns(), event, avgTurns.Get(event.GetCompletedTurns()))
+				log.Printf(
+					"[Event] Completed Turns %-8v %-20v Avg%+5v turns/sec\n",
+					event.GetCompletedTurns(),
+					event,
+					avgTurns.TurnsPerSec(event.GetCompletedTurns()),
+				)
 			case gol.FinalTurnComplete:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 			case gol.ImageOutputComplete:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 			case gol.StateChange:
-				fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+				log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 				if e.NewState == gol.Quitting {
 					break sdl
 				}
@@ -80,13 +86,18 @@ func RunHeadless(events <-chan gol.Event) {
 	for event := range events {
 		switch e := event.(type) {
 		case gol.AliveCellsCount:
-			fmt.Printf("Completed Turns %-8v %-20v Avg%+5v turns/sec\n", event.GetCompletedTurns(), event, avgTurns.Get(event.GetCompletedTurns()))
+			log.Printf(
+				"[Event] Completed Turns %-8v %-20v Avg%+5v turns/sec\n",
+				event.GetCompletedTurns(),
+				event,
+				avgTurns.TurnsPerSec(event.GetCompletedTurns()),
+			)
 		case gol.FinalTurnComplete:
-			fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), "Final Turn Complete")
+			log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), "Final Turn Complete")
 		case gol.ImageOutputComplete:
-			fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+			log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 		case gol.StateChange:
-			fmt.Printf("Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
+			log.Printf("[Event] Completed Turns %-8v %v\n", event.GetCompletedTurns(), event)
 			if e.NewState == gol.Quitting {
 				break
 			}

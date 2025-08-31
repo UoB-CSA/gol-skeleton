@@ -2,9 +2,11 @@ package gol
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
@@ -28,9 +30,10 @@ type ioCommand uint8
 
 // This is a way of creating enums in Go.
 // It will evaluate to:
-//		ioOutput 	= 0
-//		ioInput 	= 1
-//		ioCheckIdle = 2
+//
+//	ioOutput 	= 0
+//	ioInput 	= 1
+//	ioCheckIdle = 2
 const (
 	ioOutput ioCommand = iota
 	ioInput
@@ -65,9 +68,6 @@ func (io *ioState) writePgmImage() {
 	for y := 0; y < io.params.ImageHeight; y++ {
 		for x := 0; x < io.params.ImageWidth; x++ {
 			val := <-io.channels.output
-			//if val != 0 {
-			//	fmt.Println(x, y)
-			//}
 			world[y][x] = val
 		}
 	}
@@ -82,7 +82,7 @@ func (io *ioState) writePgmImage() {
 	ioError = file.Sync()
 	util.Check(ioError)
 
-	fmt.Println("File", filename, "output done!")
+	log.Printf("[IO] File %v.pgm output done", filename)
 }
 
 // readPgmImage opens a pgm file and sends its data as an array of bytes.
@@ -97,22 +97,22 @@ func (io *ioState) readPgmImage() {
 	fields := strings.Fields(string(data))
 
 	if fields[0] != "P5" {
-		panic("Not a pgm file")
+		panic(fmt.Sprintf("[IO] %v %v is not a pgm file", util.Red("ERROR"), filename))
 	}
 
 	width, _ := strconv.Atoi(fields[1])
 	if width != io.params.ImageWidth {
-		panic("Incorrect width")
+		panic(fmt.Sprintf("[IO] %v Incorrect pgm width", util.Red("ERROR")))
 	}
 
 	height, _ := strconv.Atoi(fields[2])
 	if height != io.params.ImageHeight {
-		panic("Incorrect height")
+		panic(fmt.Sprintf("[IO] %v Incorrect pgm height", util.Red("ERROR")))
 	}
 
 	maxval, _ := strconv.Atoi(fields[3])
 	if maxval != 255 {
-		panic("Incorrect maxval/bit depth")
+		panic(fmt.Sprintf("[IO] %v Incorrect pgm maxval/bit depth", util.Red("ERROR")))
 	}
 
 	image := []byte(fields[4])
@@ -121,7 +121,7 @@ func (io *ioState) readPgmImage() {
 		io.channels.input <- b
 	}
 
-	fmt.Println("File", filename, "input done!")
+	log.Printf("[IO] File %v.pgm input done", filename)
 }
 
 // startIo should be the entrypoint of the io goroutine.

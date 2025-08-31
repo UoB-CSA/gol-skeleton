@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/gol"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 // TestKeyboard tests key presses and events
@@ -41,7 +42,10 @@ func testKeyboardP(t *testing.T) {
 
 		allowDoneMutex.Lock()
 		if !allowDone {
-			t.Error("ERROR: Your program has returned from the gol.Run function before it was unpaused")
+			t.Errorf(
+				"%v Your program has returned from the gol.Run function before it was unpaused",
+				util.Red("ERROR"),
+			)
 		}
 		allowDoneMutex.Unlock()
 	}()
