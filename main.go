@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
@@ -56,22 +58,32 @@ func main() {
 	keyPresses := make(chan rune, 10)
 	events := make(chan gol.Event, 1000)
 
-	go sigint(keyPresses)
+	go sigint()
 
 	go gol.Run(params, events, keyPresses)
-	if !(*headless) {
+	if !*headless {
 		sdl.Run(params, events, keyPresses)
 	} else {
 		sdl.RunHeadless(events)
 	}
 }
 
-func sigint(keyPresses chan<- rune) {
+func sigint() {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
-	<-sigint
-	keyPresses <- 'q'
-	<-sigint
-	fmt.Println("\033[33mWARN\033[0m Force exit by the user with CTRL+C")
-	os.Exit(0)
+	var exit atomic.Bool
+	for {
+		<-sigint
+		if exit.Load() {
+			fmt.Println("\033[33mWARN\033[0m Force quit by the user")
+			os.Exit(0)
+		} else {
+			fmt.Println("\033[33mWARN\033[0m Press Ctrl+C again to force quit")
+			exit.Store(true)
+			go func() {
+				time.Sleep(4 * time.Second)
+				exit.Store(false)
+			}()
+		}
+	}
 }
