@@ -73,8 +73,7 @@ func sigint() {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
 	var exit atomic.Bool
-	for {
-		<-sigint
+	for range sigint {
 		if exit.Load() {
 			log.Printf("[Main] %v Force quit by the user", util.Yellow("WARN"))
 			os.Exit(0)
