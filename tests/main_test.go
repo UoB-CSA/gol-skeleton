@@ -1,8 +1,11 @@
-package main
+package tests
 
 import (
 	"flag"
+	"io"
+	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -18,6 +21,18 @@ var clearPixelsChan chan struct{}
 
 func TestMain(m *testing.M) {
 	runtime.LockOSThread()
+
+	// Switch the working directory from the `tests` subdirectory
+	// to the root directory to ensure correct access to test resources
+	_, filename, _, _ := runtime.Caller(0)
+	rootDir := filepath.Dir(filepath.Dir(filename))
+	if err := os.Chdir(rootDir); err != nil {
+		panic(err)
+	}
+
+	// Disable normal log, use test log only
+	log.SetOutput(io.Discard)
+
 	var sdlFlag = flag.Bool(
 		"sdl",
 		false,
@@ -26,7 +41,7 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	done := make(chan int, 1)
 	test := func() { done <- m.Run() }
-	if !(*sdlFlag) {
+	if !*sdlFlag {
 		go test()
 	} else {
 		w = sdl.NewWindow(512, 512)

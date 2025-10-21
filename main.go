@@ -2,14 +2,17 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/sdl"
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 // main is the function called when starting Game of Life with 'go run .'
@@ -48,30 +51,39 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Printf("%-10v %v\n", "Threads", params.Threads)
-	fmt.Printf("%-10v %v\n", "Width", params.ImageWidth)
-	fmt.Printf("%-10v %v\n", "Height", params.ImageHeight)
-	fmt.Printf("%-10v %v\n", "Turns", params.Turns)
+	log.Printf("[Main] %-10v %v", "Threads", params.Threads)
+	log.Printf("[Main] %-10v %v", "Width", params.ImageWidth)
+	log.Printf("[Main] %-10v %v", "Height", params.ImageHeight)
+	log.Printf("[Main] %-10v %v", "Turns", params.Turns)
 
 	keyPresses := make(chan rune, 10)
 	events := make(chan gol.Event, 1000)
 
-	go sigint(keyPresses)
+	go sigint()
 
 	go gol.Run(params, events, keyPresses)
-	if !(*headless) {
+	if !*headless {
 		sdl.Run(params, events, keyPresses)
 	} else {
 		sdl.RunHeadless(events)
 	}
 }
 
-func sigint(keyPresses chan<- rune) {
+func sigint() {
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
-	<-sigint
-	keyPresses <- 'q'
-	<-sigint
-	fmt.Println("\033[33mWARN\033[0m Force exit by the user with CTRL+C")
-	os.Exit(0)
+	var exit atomic.Bool
+	for range sigint {
+		if exit.Load() {
+			log.Printf("[Main] %v Force quit by the user", util.Yellow("WARN"))
+			os.Exit(0)
+		} else {
+			log.Printf("[Main] %v Press Ctrl+C again to force quit", util.Yellow("WARN"))
+			exit.Store(true)
+			go func() {
+				time.Sleep(4 * time.Second)
+				exit.Store(false)
+			}()
+		}
+	}
 }

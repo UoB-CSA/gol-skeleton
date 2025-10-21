@@ -110,7 +110,7 @@ func (event AliveCellsCount) GetCompletedTurns() int {
 }
 
 func (event ImageOutputComplete) String() string {
-	return fmt.Sprintf("File %v Output Done", event.Filename)
+	return fmt.Sprintf("File %v.pgm output done", event.Filename)
 }
 
 func (event ImageOutputComplete) GetCompletedTurns() int {

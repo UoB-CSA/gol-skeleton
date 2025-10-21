@@ -2,11 +2,12 @@ package util
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
 func VisualiseMatrix(given [][]uint8, width, height int) {
-	fmt.Print(matricesToString(given, nil, width, height))
+	log.Print(matricesToString(given, nil, width, height))
 }
 
 func (c1 Cell) in(slice []Cell) bool {
@@ -81,7 +82,7 @@ func squaresToStrings(given, expected [][]uint8, width, height int) []string {
 		for j := 0; j < width; j++ {
 			if given[i][j] == 0xFF {
 				output = append(output, "██")
-			} else if given [i][j] == 0x00 {
+			} else if given[i][j] == 0x00 {
 				output = append(output, "  ")
 			}
 		}
@@ -105,4 +106,16 @@ func squaresToStrings(given, expected [][]uint8, width, height int) []string {
 	output = append(output, "\n")
 
 	return output
+}
+
+func Green(text string) string {
+	return "\033[32m" + text + "\033[0m"
+}
+
+func Yellow(text string) string {
+	return "\033[33m" + text + "\033[0m"
+}
+
+func Red(text string) string {
+	return "\033[31m" + text + "\033[0m"
 }
